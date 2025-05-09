@@ -6,6 +6,7 @@ import {
   ActivityIndicator,
   Alert,
   FlatList,
+  Linking,
   Modal,
   PermissionsAndroid,
   Platform,
@@ -16,10 +17,10 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  useWindowDimensions,
 } from "react-native";
 import { BleManager, State as BleState, Device } from "react-native-ble-plx";
 import { btoa } from "react-native-quick-base64";
-
 
 const manager = new BleManager();
 const SCAN_DURATION_MS = 10000; // 10 seconds
@@ -59,9 +60,12 @@ export default function App() {
 
   const scanTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
+
   useEffect(() => {
-    // Force landscape orientation on mount
-    ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.LANDSCAPE);
+    // Allow both orientations
+    ScreenOrientation.unlockAsync();
     Alert.alert(
       "Enable Bluetooth & Location",
       "Please make sure your Bluetooth and Location are turned on for BLE scanning."
@@ -70,8 +74,6 @@ export default function App() {
       manager.stopDeviceScan();
       manager.destroy();
       if (scanTimeout.current) clearTimeout(scanTimeout.current);
-      // Optionally unlock orientation on unmount:
-      // ScreenOrientation.unlockAsync();
     };
   }, []);
 
@@ -302,45 +304,159 @@ export default function App() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: "#f5f5f5" }}>
-      <View style={styles.topBar}>
-        <View
-          style={{ flex: 1, alignItems: "center", justifyContent: "center" }}
-        >
-          <Text style={styles.title}>SCIL BLE Car Controller</Text>
-        </View>
-        <TouchableOpacity style={styles.settingsButton} onPress={openSettings}>
-          <Ionicons name="settings-outline" size={28} color="#333" />
-        </TouchableOpacity>
-      </View>
-      <View style={styles.connBar}>
-        {device ? (
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-            <Text style={styles.connectedInfoText}>
-              Connected: {device.name || device.localName || "Unnamed"} (
-              {device.id})
-            </Text>
+      {/* Top bar */}
+      <View
+        style={[
+          styles.topBar,
+          isLandscape && {
+            flexDirection: "row",
+            alignItems: "flex-start",
+            paddingTop: 18,
+          },
+          !isLandscape && { marginTop: 18 },
+        ]}
+      >
+        {isLandscape ? (
+          <>
+            {/* Settings on the left */}
             <TouchableOpacity
-              style={styles.disconnectButton}
-              onPress={disconnectDevice}
+              style={[
+                styles.settingsButton,
+                { alignSelf: "flex-start", marginTop: 8 },
+              ]}
+              onPress={openSettings}
             >
-              <Text style={styles.disconnectButtonText}>Disconnect</Text>
+              <Ionicons name="settings-outline" size={28} color="#333" />
             </TouchableOpacity>
-          </View>
+            {/* Title block in the center */}
+            <View
+              style={{
+                flex: 1,
+                alignItems: "center",
+                justifyContent: "flex-start",
+              }}
+            >
+              <Text style={styles.labTitle}>
+                Sorsogon Community Innovation Labs
+              </Text>
+              <Text
+                style={[
+                  styles.title,
+                  { marginTop: 2, marginBottom: 0, textAlign: "center" },
+                ]}
+              >
+                BLE Car Controller
+              </Text>
+            </View>
+            {/* Spacer for symmetry */}
+            <View style={{ width: 40 }} />
+          </>
         ) : (
-          <TouchableOpacity
-            style={styles.connectButton}
-            onPress={scanForDevices}
-            disabled={isScanning}
-          >
-            <Ionicons name="bluetooth" size={20} color="#fff" />
-            <Text style={styles.connectButtonText}>
-              {isScanning ? "Scanning..." : "Connect"}
-            </Text>
-          </TouchableOpacity>
+          <>
+            <View style={{ flex: 1 }} />
+            <TouchableOpacity
+              style={styles.settingsButton}
+              onPress={openSettings}
+            >
+              <Ionicons name="settings-outline" size={28} color="#333" />
+            </TouchableOpacity>
+          </>
         )}
       </View>
-      <View style={styles.landscapeContainer}>
-        <View style={styles.leftPanel}>
+      {/* Title below top bar, always centered and spaced down (portrait only) */}
+      {!isLandscape && (
+        <View style={styles.titleContainer}>
+          <Text style={styles.labTitle}>
+            Sorsogon Community Innovation Labs
+          </Text>
+          <Text style={styles.title}>BLE Car Controller</Text>
+        </View>
+      )}
+      {/* Connection bar */}
+      <View
+        style={[
+          styles.connBar,
+          isLandscape
+            ? {
+                marginTop: 0,
+                marginBottom: 0,
+                alignItems: "center",
+                justifyContent: "center",
+              }
+            : { marginTop: 0, marginBottom: 0 },
+        ]}
+      >
+        <View
+          style={
+            isLandscape
+              ? {
+                  flex: 1,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  flexDirection: "row",
+                }
+              : undefined
+          }
+        >
+          {device ? (
+            <View
+              style={{
+                flexDirection: "column",
+                alignItems: "center",
+                gap: 0,
+                justifyContent: isLandscape ? "center" : undefined,
+              }}
+            >
+              <Text style={styles.connectedInfoText}>
+                Connected: {device.name || device.localName || "Unnamed"}
+              </Text>
+              <Text>({device.id})</Text>
+              <TouchableOpacity
+                style={styles.disconnectButton}
+                onPress={disconnectDevice}
+              >
+                <Text style={styles.disconnectButtonText}>Disconnect</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <TouchableOpacity
+              style={styles.connectButton}
+              onPress={scanForDevices}
+              disabled={isScanning}
+            >
+              <Ionicons name="bluetooth" size={20} color="#fff" />
+              <Text style={styles.connectButtonText}>
+                {isScanning ? "Scanning..." : "Connect"}
+              </Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      </View>
+      {/* Main controls */}
+      <View
+        style={
+          isLandscape
+            ? [styles.landscapeContainer, { marginTop: 10 }]
+            : styles.portraitContainer
+        }
+      >
+        <View
+          style={
+            isLandscape
+              ? [
+                  styles.leftPanel,
+                  {
+                    justifyContent: "center",
+                    marginTop: 0,
+                    marginBottom: 0,
+                  },
+                ]
+              : [
+                  styles.portraitPanel,
+                  { alignItems: "center", marginTop: 60, marginBottom: 0 },
+                ]
+          }
+        >
           <View style={styles.controllerContainer}>
             <View style={styles.dpadRow}>
               <TouchableOpacity
@@ -384,27 +500,53 @@ export default function App() {
               </TouchableOpacity>
             </View>
           </View>
+          {/* Portrait: Speed controls just below D-pad */}
+          {!isLandscape && (
+            <View style={[styles.speedPortraitWrapper, { marginTop: 40 }]}>
+              <View style={styles.speedRow}>
+                <TouchableOpacity
+                  style={styles.speedButton}
+                  onPress={() => handleSpeedChange(-10)}
+                  disabled={!device}
+                >
+                  <Text style={styles.speedText}>-</Text>
+                </TouchableOpacity>
+                <Text style={styles.speedValue}>{speed}</Text>
+                <TouchableOpacity
+                  style={styles.speedButton}
+                  onPress={() => handleSpeedChange(10)}
+                  disabled={!device}
+                >
+                  <Text style={styles.speedText}>+</Text>
+                </TouchableOpacity>
+              </View>
+              <Text style={styles.speedLabel}>Speed (0-100)</Text>
+            </View>
+          )}
         </View>
-        <View style={styles.rightPanel}>
-          <View style={styles.speedRow}>
-            <TouchableOpacity
-              style={styles.speedButton}
-              onPress={() => handleSpeedChange(-10)}
-              disabled={!device}
-            >
-              <Text style={styles.speedText}>-</Text>
-            </TouchableOpacity>
-            <Text style={styles.speedValue}>{speed}</Text>
-            <TouchableOpacity
-              style={styles.speedButton}
-              onPress={() => handleSpeedChange(10)}
-              disabled={!device}
-            >
-              <Text style={styles.speedText}>+</Text>
-            </TouchableOpacity>
+        {/* Landscape: Speed controls on right */}
+        {isLandscape && (
+          <View style={styles.rightPanel}>
+            <View style={styles.speedRow}>
+              <TouchableOpacity
+                style={styles.speedButton}
+                onPress={() => handleSpeedChange(-10)}
+                disabled={!device}
+              >
+                <Text style={styles.speedText}>-</Text>
+              </TouchableOpacity>
+              <Text style={styles.speedValue}>{speed}</Text>
+              <TouchableOpacity
+                style={styles.speedButton}
+                onPress={() => handleSpeedChange(10)}
+                disabled={!device}
+              >
+                <Text style={styles.speedText}>+</Text>
+              </TouchableOpacity>
+            </View>
+            <Text style={styles.speedLabel}>Speed (0-100)</Text>
           </View>
-          <Text style={styles.speedLabel}>Speed (0-100)</Text>
-        </View>
+        )}
       </View>
       <Modal
         visible={showDeviceModal}
@@ -504,7 +646,23 @@ export default function App() {
         onRequestClose={() => setShowSettings(false)}
       >
         <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { maxWidth: 420, width: "92%" }]}>
+          <View
+            style={[
+              styles.modalContent,
+              // About/Help: small, Advanced: big (landscape or portrait)
+              settingsTab === "advanced"
+                ? {
+                    maxWidth: isLandscape ? 520 : 420,
+                    width: isLandscape ? "98%" : "92%",
+                    maxHeight: isLandscape ? "90%" : undefined,
+                  }
+                : {
+                    maxWidth: 420,
+                    width: "92%",
+                    maxHeight: 420,
+                  },
+            ]}
+          >
             <View style={{ flexDirection: "row", marginBottom: 10 }}>
               <TouchableOpacity
                 style={[
@@ -534,22 +692,88 @@ export default function App() {
                 <Text style={styles.settingsTabText}>Advanced</Text>
               </TouchableOpacity>
             </View>
-            <ScrollView style={{ width: "100%" }}>
+            <ScrollView
+              style={{ width: "100%" }}
+              contentContainerStyle={
+                settingsTab === "advanced"
+                  ? isLandscape
+                    ? { paddingBottom: 24, minHeight: 320 }
+                    : { paddingBottom: 12 }
+                  : { paddingBottom: 12 }
+              }
+              horizontal={false}
+              alwaysBounceVertical={true}
+            >
               {settingsTab === "about" && (
                 <View>
                   <Text
                     style={{
                       fontWeight: "bold",
-                      fontSize: 18,
-                      marginBottom: 8,
+                      fontSize: 15,
+                      color: "#023c69",
+                      textAlign: "center",
+                      marginBottom: 0,
+                      letterSpacing: 0.2,
                     }}
                   >
-                    SCIL BLE Car Controller
+                    Sorsogon Community Innovation Labs
+                  </Text>
+                  <Text
+                    style={{
+                      fontWeight: "bold",
+                      fontSize: 18,
+                      marginBottom: 8,
+                      color: "#023c69",
+                      textAlign: "center",
+                    }}
+                  >
+                    BLE Car Controller
                   </Text>
                   <Text>
                     Version 1.0.0{"\n"}
                     Developed for controlling BLE-enabled cars via Bluetooth Low
                     Energy.
+                  </Text>
+                  <Text style={{ marginTop: 10, fontWeight: "bold" }}>
+                    Facebook:
+                  </Text>
+                  <Text
+                    style={{
+                      marginLeft: 10,
+                      color: "#1976d2",
+                    }}
+                    onPress={() =>
+                      Linking.openURL(
+                        "https://www.facebook.com/share/g/18r6AjqyBG/"
+                      )
+                    }
+                  >
+                    Sorsogon Community Innovation Labs
+                  </Text>
+                  <Text
+                    style={{
+                      marginLeft: 10,
+                      color: "#1976d2",
+                    }}
+                    onPress={() =>
+                      Linking.openURL(
+                        "https://www.facebook.com/profile.php?id=61571653147947"
+                      )
+                    }
+                  >
+                    The Workshop
+                  </Text>
+                  <Text style={{ marginTop: 10, fontWeight: "bold" }}>
+                    Website:
+                  </Text>
+                  <Text
+                    style={{
+                      marginLeft: 10,
+                      color: "#1976d2",
+                    }}
+                    onPress={() => Linking.openURL("http://innovationlabs.ph/")}
+                  >
+                    Innovation Labs
                   </Text>
                 </View>
               )}
@@ -585,49 +809,55 @@ export default function App() {
                   </Text>
                   <Text style={{ marginBottom: 8 }}>
                     You can change the BLE command sent for each control.{"\n"}
-                    <Text style={{ color: "#888" }}>
-                      (Default: F=Forward, B=Backward, L=Left, R=Right, S=Stop,
-                      +=SpeedUp, -=SpeedDown)
-                    </Text>
                   </Text>
-                  {Object.entries(DEFAULT_COMMANDS).map(([key, defVal]) => (
-                    <View
-                      key={key}
-                      style={{
-                        flexDirection: "row",
-                        alignItems: "center",
-                        marginBottom: 6,
-                      }}
-                    >
-                      <Text style={{ width: 90 }}>
-                        {key === "F" && "Forward"}
-                        {key === "B" && "Backward"}
-                        {key === "L" && "Left"}
-                        {key === "R" && "Right"}
-                        {key === "S" && "Stop"}
-                        {key === "+" && "Speed Up"}
-                        {key === "-" && "Speed Down"}
-                      </Text>
-                      <TextInput
-                        style={styles.commandInput}
-                        value={editMap[key as keyof typeof DEFAULT_COMMANDS]}
-                        onChangeText={(v) =>
-                          setEditMap((prev) => ({
-                            ...prev,
-                            [key]: v,
-                          }))
-                        }
-                        autoCapitalize="characters"
-                        maxLength={12}
-                      />
-                      <Text style={{ color: "#888", marginLeft: 6 }}>
-                        (Default: {defVal})
-                      </Text>
-                    </View>
-                  ))}
+                  <View
+                    style={{
+                      flexDirection: "column",
+                      flexWrap: "nowrap",
+                      gap: 12,
+                      justifyContent: "flex-start",
+                    }}
+                  >
+                    {Object.entries(DEFAULT_COMMANDS).map(([key, defVal]) => (
+                      <View
+                        key={key}
+                        style={{
+                          flexDirection: "row",
+                          alignItems: "center",
+                          marginBottom: 6,
+                        }}
+                      >
+                        <Text style={{ width: 90 }}>
+                          {key === "F" && "Forward"}
+                          {key === "B" && "Backward"}
+                          {key === "L" && "Left"}
+                          {key === "R" && "Right"}
+                          {key === "S" && "Stop"}
+                          {key === "+" && "Speed Up"}
+                          {key === "-" && "Speed Down"}
+                        </Text>
+                        <TextInput
+                          style={styles.commandInput}
+                          value={editMap[key as keyof typeof DEFAULT_COMMANDS]}
+                          onChangeText={(v) =>
+                            setEditMap((prev) => ({
+                              ...prev,
+                              [key]: v,
+                            }))
+                          }
+                          autoCapitalize="characters"
+                          maxLength={12}
+                        />
+                        <Text style={{ color: "#888", marginLeft: 6 }}>
+                          (Default: {defVal})
+                        </Text>
+                      </View>
+                    ))}
+                  </View>
                   <Text style={{ color: "#888", fontSize: 12, marginTop: 8 }}>
-                    Note: If you change "F" to "UP", the controller will send
-                    "UP" instead of "F" for Forward.
+                    Note: If you change the command (e.g., from "F" to "UP"),
+                    make sure your Arduino code or device firmware is updated to
+                    recognize and respond to the new command.
                   </Text>
                 </View>
               )}
@@ -637,6 +867,7 @@ export default function App() {
                 flexDirection: "row",
                 justifyContent: "flex-end",
                 marginTop: 12,
+                gap: 10,
               }}
             >
               {settingsTab === "advanced" && (
@@ -662,6 +893,20 @@ export default function App() {
 }
 
 const styles = StyleSheet.create({
+  titleContainer: {
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 24,
+    marginBottom: 8,
+  },
+  labTitle: {
+    fontSize: 15,
+    fontWeight: "bold",
+    color: "#1976d2",
+    textAlign: "center",
+    marginBottom: 0,
+    letterSpacing: 0.2,
+  },
   title: {
     fontSize: 22,
     fontWeight: "bold",
@@ -672,13 +917,20 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 12,
-    paddingTop: 10,
+    paddingTop: 18,
     paddingBottom: 2,
     backgroundColor: "#f5f5f5",
+    minHeight: 48,
   },
   settingsButton: {
     padding: 6,
     marginLeft: 8,
+    marginRight: 8,
+    alignItems: "center",
+    justifyContent: "center",
+    width: 40,
+    height: 40,
+    alignSelf: "flex-end",
   },
   connBar: {
     alignItems: "center",
@@ -705,8 +957,17 @@ const styles = StyleSheet.create({
   landscapeContainer: {
     flex: 1,
     flexDirection: "row",
-    justifyContent: "space-between",
+    justifyContent: "center",
     alignItems: "center",
+    paddingHorizontal: 18,
+    paddingBottom: 18,
+    gap: 12,
+  },
+  portraitContainer: {
+    flex: 1,
+    flexDirection: "column",
+    justifyContent: "flex-start",
+    alignItems: "stretch",
     paddingHorizontal: 18,
     paddingBottom: 18,
     gap: 12,
@@ -715,15 +976,31 @@ const styles = StyleSheet.create({
     flex: 1.2,
     alignItems: "center",
     justifyContent: "center",
+    marginTop: 10,
   },
   rightPanel: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
   },
+  portraitPanel: {
+    flex: 1,
+    justifyContent: "flex-start",
+    marginVertical: 0,
+  },
+  portraitSpeedPanel: {
+    marginTop: 0,
+  },
+  speedPortraitWrapper: {
+    marginTop: 40,
+    marginBottom: 0,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   controllerContainer: {
     alignItems: "center",
-    marginBottom: 20,
+    marginBottom: 10,
+    marginTop: 0,
   },
   dpadRow: {
     flexDirection: "row",
@@ -750,26 +1027,26 @@ const styles = StyleSheet.create({
     marginBottom: 5,
   },
   speedButton: {
-    width: 60,
-    height: 60,
+    width: 70,
+    height: 70,
     borderRadius: 35,
     backgroundColor: "#b0c4de",
     alignItems: "center",
     justifyContent: "center",
-    marginHorizontal: 15,
+    marginHorizontal: 18,
   },
   speedText: {
-    fontSize: 38,
+    fontSize: 44,
     fontWeight: "bold",
   },
   speedValue: {
-    fontSize: 38,
+    fontSize: 44,
     fontWeight: "bold",
     minWidth: 60,
     textAlign: "center",
   },
   speedLabel: {
-    fontSize: 14,
+    fontSize: 16,
     color: "#555",
     marginTop: 2,
   },
@@ -794,11 +1071,14 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   connectedInfoText: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
     fontSize: 14,
     color: "#333",
   },
   disconnectButton: {
-    marginLeft: 10,
+    marginTop: 5,
     backgroundColor: "#e57373",
     paddingHorizontal: 12,
     paddingVertical: 4,
@@ -823,30 +1103,30 @@ const styles = StyleSheet.create({
   rescanButton: {
     marginTop: 10,
     backgroundColor: "#b0c4de",
-    paddingHorizontal: 16,
+    paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 6,
     alignItems: "center",
     justifyContent: "center",
     minWidth: 90,
     minHeight: 40,
-  },
-  closeButton: {
-    marginTop: 10,
-    backgroundColor: "#888",
-    paddingHorizontal: 16,
-    paddingVertical: 6,
-    borderRadius: 6,
-    alignItems: "center",
-    justifyContent: "center",
-    minWidth: 90,
-    minHeight: 40,
-    marginLeft: 10,
   },
   rescanButtonText: {
     color: "#222",
     fontWeight: "bold",
     fontSize: 14,
+  },
+  closeButton: {
+    marginTop: 10,
+    backgroundColor: "#888",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+    alignItems: "center",
+    justifyContent: "center",
+    minWidth: 90,
+    minHeight: 40,
+    marginLeft: 0,
   },
   closeButtonText: {
     color: "#fff",
@@ -870,15 +1150,20 @@ const styles = StyleSheet.create({
   },
   saveButton: {
     backgroundColor: "#1976d2",
-    paddingHorizontal: 18,
-    paddingVertical: 7,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
     borderRadius: 6,
-    marginRight: 10,
+    alignItems: "center",
+    justifyContent: "center",
+    minWidth: 90,
+    minHeight: 40,
+    marginTop: 10,
+    marginLeft: 0,
   },
   saveButtonText: {
     color: "#fff",
     fontWeight: "bold",
-    fontSize: 15,
+    fontSize: 14,
   },
   commandInput: {
     borderWidth: 1,
