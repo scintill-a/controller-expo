@@ -1,0 +1,34 @@
+> npx create-expo-app@latest name
+
+> npm run reset-project
+
+> npx expo install react-native-... (for dev build)
+    e.g. npx expo install react-native-ble-plx react-native-quick-base64 expo-location
+app.json:
+    [
+        "react-native-ble-plx",
+        {
+            "isBackgroundEnabled": true,
+            "modes": ["peripheral", "central"],
+            "bluetoothAlwaysPermission": "Allow $(PRODUCT_NAME) to connect to bluetooth devices"
+        }
+    ]
+
+> npx expo prebuild (for native features)
+android/.../AndroidManifest/ :
+    <uses-permission android:name="android.permission.BLUETOOTH_SCAN" android:usesPermissionFlags="neverForLocation"/>
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT"/>
+    <uses-permission android:name="android.permission.BLUETOOTH"/>
+    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN"/>
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
+
+> npm install -g eas-cli@latest
+    already installed just make sure to update with @latest
+
+> eas login
+
+> eas build:configure
+
+> eas build --platform android --profile development
+    automatically install, expo-dev-client
+
