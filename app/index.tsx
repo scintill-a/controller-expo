@@ -23,9 +23,8 @@ import { btoa } from "react-native-quick-base64";
 import styles from "./styles";
 
 const manager = new BleManager();
-const SCAN_DURATION_MS = 10000; // 10 seconds
+const SCAN_DURATION_MS = 10000;
 
-// Default command mapping
 const DEFAULT_COMMANDS = {
   F: "F", // Forward
   B: "B", // Backward
@@ -649,7 +648,7 @@ export default function App() {
           <View
             style={[
               styles.modalContent,
-              // About/Help: small, Advanced: big (landscape or portrait)
+              // About/Help: small, Advanced: big
               settingsTab === "advanced"
                 ? {
                     maxWidth: isLandscape ? 520 : 420,
