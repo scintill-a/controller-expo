@@ -62,6 +62,14 @@ export default function App() {
   const { width, height } = useWindowDimensions();
   const isLandscape = width > height;
 
+  // Send speed command on mount and whenever speed changes
+  useEffect(() => {
+    // Only send if device is connected and characteristic is available
+    if (device && serviceUUID && characteristicUUID) {
+      sendCommand(String(speed));
+    }
+  }, [speed, device, serviceUUID, characteristicUUID]);
+
   useEffect(() => {
     // Allow both orientations
     ScreenOrientation.unlockAsync();
@@ -69,6 +77,8 @@ export default function App() {
       "Enable Bluetooth & Location",
       "Please make sure your Bluetooth and Location are turned on for BLE scanning."
     );
+    // Set speed to 50 and send immediately on mount
+    setSpeed(50);
     return () => {
       manager.stopDeviceScan();
       manager.destroy();
@@ -288,8 +298,11 @@ export default function App() {
     });
   };
 
-  const handleDirection = (key: keyof typeof DEFAULT_COMMANDS) =>
-    sendCommand(commandMap[key]);
+  // Replace handleDirection with a function that takes key and returns handlers
+  const getDirectionHandlers = (key: keyof typeof DEFAULT_COMMANDS) => ({
+    onPressIn: () => sendCommand(commandMap[key]),
+    onPressOut: () => sendCommand(commandMap["S"]),
+  });
 
   const openSettings = () => {
     setEditMap({ ...commandMap });
@@ -460,7 +473,8 @@ export default function App() {
             <View style={styles.dpadRow}>
               <TouchableOpacity
                 style={styles.dpadButton}
-                onPress={() => handleDirection("F")}
+                // onPress={() => handleDirection("F")}
+                {...getDirectionHandlers("F")}
                 disabled={!device}
               >
                 <Text style={styles.dpadText}>▲</Text>
@@ -469,21 +483,24 @@ export default function App() {
             <View style={styles.dpadRow}>
               <TouchableOpacity
                 style={styles.dpadButton}
-                onPress={() => handleDirection("L")}
+                // onPress={() => handleDirection("L")}
+                {...getDirectionHandlers("L")}
                 disabled={!device}
               >
                 <Text style={styles.dpadText}>◀</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.dpadButton}
-                onPress={() => handleDirection("S")}
+                // onPress={() => handleDirection("S")}
+                {...getDirectionHandlers("S")}
                 disabled={!device}
               >
                 <Text style={styles.dpadText}>■</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.dpadButton}
-                onPress={() => handleDirection("R")}
+                // onPress={() => handleDirection("R")}
+                {...getDirectionHandlers("R")}
                 disabled={!device}
               >
                 <Text style={styles.dpadText}>▶</Text>
@@ -492,7 +509,8 @@ export default function App() {
             <View style={styles.dpadRow}>
               <TouchableOpacity
                 style={styles.dpadButton}
-                onPress={() => handleDirection("B")}
+                // onPress={() => handleDirection("B")}
+                {...getDirectionHandlers("B")}
                 disabled={!device}
               >
                 <Text style={styles.dpadText}>▼</Text>
