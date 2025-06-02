@@ -38,6 +38,10 @@ const DEFAULT_COMMANDS = {
   S: "S", // Stop
   "+": "+", // Speed up
   "-": "-", // Speed down
+  FL: "FL", // Forward-Left
+  FR: "FR", // Forward-Right
+  BL: "BL", // Backward-Left
+  BR: "BR", // Backward-Right
 };
 
 export default function App() {
@@ -309,13 +313,26 @@ export default function App() {
     onPressOut: () => sendCommand(commandMap["S"]),
   });
 
+  // Helper to update diagonals in editMap when F/B/L/R change
+  const updateEditMapDiagonals = (baseMap: typeof DEFAULT_COMMANDS) => {
+    return {
+      ...baseMap,
+      FL: (baseMap.F || "") + (baseMap.L || ""),
+      FR: (baseMap.F || "") + (baseMap.R || ""),
+      BL: (baseMap.B || "") + (baseMap.L || ""),
+      BR: (baseMap.B || "") + (baseMap.R || ""),
+    };
+  };
+
   const openSettings = () => {
     setEditMap({ ...commandMap });
     setShowSettings(true);
     setSettingsTab("about");
   };
   const saveAdvancedSettings = () => {
-    setCommandMap({ ...editMap });
+    // Update commandMap with edited values and update diagonals
+    const updated = updateEditMapDiagonals(editMap);
+    setCommandMap(updated);
     setShowSettings(false);
   };
 
@@ -332,6 +349,14 @@ export default function App() {
     Gesture.LongPress()
       .minDuration(50)
       .onStart(() => handleSpeedChange(delta))
+      .runOnJS(true);
+
+  // Gesture for diagonal buttons
+  const getDiagonalGesture = (key: keyof typeof DEFAULT_COMMANDS) =>
+    Gesture.LongPress()
+      .minDuration(50)
+      .onStart(() => sendCommand(commandMap[key]))
+      .onEnd(() => sendCommand(commandMap["S"]))
       .runOnJS(true);
 
   return (
@@ -491,7 +516,21 @@ export default function App() {
             }
           >
             <View style={styles.controllerContainer}>
+              {/* D-pad with diagonals */}
               <View style={styles.dpadRow}>
+                {/* Forward-Left */}
+                <GestureDetector gesture={getDiagonalGesture("FL")}>
+                  <View
+                    style={[
+                      styles.dpadButton,
+                      { width: 50, height: 50, marginTop: 40 },
+                    ]} // Smaller size for diagonal buttons
+                    pointerEvents={device ? "auto" : "none"}
+                  >
+                    <Text style={styles.dpadText}>↖</Text>
+                  </View>
+                </GestureDetector>
+                {/* Forward */}
                 <GestureDetector gesture={getDirectionGesture("F")}>
                   <View
                     style={styles.dpadButton}
@@ -500,8 +539,21 @@ export default function App() {
                     <Text style={styles.dpadText}>▲</Text>
                   </View>
                 </GestureDetector>
+                {/* Forward-Right */}
+                <GestureDetector gesture={getDiagonalGesture("FR")}>
+                  <View
+                    style={[
+                      styles.dpadButton,
+                      { width: 50, height: 50, marginTop: 40 },
+                    ]} // Smaller size for diagonal buttons
+                    pointerEvents={device ? "auto" : "none"}
+                  >
+                    <Text style={styles.dpadText}>↗</Text>
+                  </View>
+                </GestureDetector>
               </View>
               <View style={styles.dpadRow}>
+                {/* Left */}
                 <GestureDetector gesture={getDirectionGesture("L")}>
                   <View
                     style={styles.dpadButton}
@@ -510,6 +562,7 @@ export default function App() {
                     <Text style={styles.dpadText}>◀</Text>
                   </View>
                 </GestureDetector>
+                {/* Stop */}
                 <GestureDetector gesture={getDirectionGesture("S")}>
                   <View
                     style={styles.dpadButton}
@@ -518,6 +571,7 @@ export default function App() {
                     <Text style={styles.dpadText}>■</Text>
                   </View>
                 </GestureDetector>
+                {/* Right */}
                 <GestureDetector gesture={getDirectionGesture("R")}>
                   <View
                     style={styles.dpadButton}
@@ -528,12 +582,31 @@ export default function App() {
                 </GestureDetector>
               </View>
               <View style={styles.dpadRow}>
+                {/* Backward-Left */}
+                <GestureDetector gesture={getDiagonalGesture("BL")}>
+                  <View
+                    style={[styles.dpadButton, { width: 50, height: 50 }]} // Smaller size for diagonal buttons
+                    pointerEvents={device ? "auto" : "none"}
+                  >
+                    <Text style={styles.dpadText}>↙</Text>
+                  </View>
+                </GestureDetector>
+                {/* Backward */}
                 <GestureDetector gesture={getDirectionGesture("B")}>
                   <View
                     style={styles.dpadButton}
                     pointerEvents={device ? "auto" : "none"}
                   >
                     <Text style={styles.dpadText}>▼</Text>
+                  </View>
+                </GestureDetector>
+                {/* Backward-Right */}
+                <GestureDetector gesture={getDiagonalGesture("BR")}>
+                  <View
+                    style={[styles.dpadButton, { width: 50, height: 50 }]} // Smaller size for diagonal buttons
+                    pointerEvents={device ? "auto" : "none"}
+                  >
+                    <Text style={styles.dpadText}>↘</Text>
                   </View>
                 </GestureDetector>
               </View>
@@ -863,43 +936,51 @@ export default function App() {
                         justifyContent: "flex-start",
                       }}
                     >
-                      {Object.entries(DEFAULT_COMMANDS).map(([key, defVal]) => (
-                        <View
-                          key={key}
-                          style={{
-                            flexDirection: "row",
-                            alignItems: "center",
-                            marginBottom: 6,
-                          }}
-                        >
-                          <Text style={{ width: 90 }}>
-                            {key === "F" && "Forward"}
-                            {key === "B" && "Backward"}
-                            {key === "L" && "Left"}
-                            {key === "R" && "Right"}
-                            {key === "S" && "Stop"}
-                            {key === "+" && "Speed Up"}
-                            {key === "-" && "Speed Down"}
-                          </Text>
-                          <TextInput
-                            style={styles.commandInput}
-                            value={
-                              editMap[key as keyof typeof DEFAULT_COMMANDS]
-                            }
-                            onChangeText={(v) =>
-                              setEditMap((prev) => ({
-                                ...prev,
-                                [key]: v,
-                              }))
-                            }
-                            autoCapitalize="characters"
-                            maxLength={12}
-                          />
-                          <Text style={{ color: "#888", marginLeft: 6 }}>
-                            (Default: {defVal})
-                          </Text>
-                        </View>
-                      ))}
+                      {Object.entries(DEFAULT_COMMANDS)
+                        .filter(
+                          ([key]) => !["FL", "FR", "BL", "BR"].includes(key)
+                        ) // Filter out diagonal commands
+                        .map(([key, defVal]) => (
+                          <View
+                            key={key}
+                            style={{
+                              flexDirection: "row",
+                              alignItems: "center",
+                              marginBottom: 6,
+                            }}
+                          >
+                            <Text style={{ width: 90 }}>
+                              {key === "F" && "Forward"}
+                              {key === "B" && "Backward"}
+                              {key === "L" && "Left"}
+                              {key === "R" && "Right"}
+                              {key === "S" && "Stop"}
+                              {key === "+" && "Speed Up"}
+                              {key === "-" && "Speed Down"}
+                            </Text>
+                            <TextInput
+                              style={styles.commandInput}
+                              value={
+                                editMap[key as keyof typeof DEFAULT_COMMANDS]
+                              }
+                              onChangeText={(v) =>
+                                setEditMap((prev) => {
+                                  const next = { ...prev, [key]: v };
+                                  // If F, B, L, or R is changed, update diagonals
+                                  if (["F", "B", "L", "R"].includes(key)) {
+                                    return updateEditMapDiagonals(next);
+                                  }
+                                  return next;
+                                })
+                              }
+                              autoCapitalize="characters"
+                              maxLength={12}
+                            />
+                            <Text style={{ color: "#888", marginLeft: 6 }}>
+                              (Default: {defVal})
+                            </Text>
+                          </View>
+                        ))}
                     </View>
                     <Text style={{ color: "#888", fontSize: 12, marginTop: 8 }}>
                       Note: If you change the command (e.g., from &quot;F&quot;
