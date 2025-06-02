@@ -62,13 +62,13 @@ export default function App() {
   const { width, height } = useWindowDimensions();
   const isLandscape = width > height;
 
-  // Send speed command on mount and whenever speed changes
+  // Send '/' automatically when connected to BLE
   useEffect(() => {
-    // Only send if device is connected and characteristic is available
     if (device && serviceUUID && characteristicUUID) {
-      sendCommand(String(speed));
+      sendCommand("/");
+      setSpeed(50);
     }
-  }, [speed, device, serviceUUID, characteristicUUID]);
+  }, [device, serviceUUID, characteristicUUID]);
 
   useEffect(() => {
     // Allow both orientations
@@ -806,8 +806,8 @@ export default function App() {
                     Help
                   </Text>
                   <Text>
-                    - Use the D-pad to control the car's direction.{"\n"}- Use
-                    the + and - buttons to adjust speed.{"\n"}- Tap the
+                    - Use the D-pad to control the car&apos;s direction.{"\n"}-
+                    Use the + and - buttons to adjust speed.{"\n"}- Tap the
                     Bluetooth icon to connect/disconnect.{"\n"}- In Advanced,
                     you can remap controller commands.{"\n"}
                   </Text>
@@ -872,9 +872,10 @@ export default function App() {
                     ))}
                   </View>
                   <Text style={{ color: "#888", fontSize: 12, marginTop: 8 }}>
-                    Note: If you change the command (e.g., from "F" to "UP"),
-                    make sure your Arduino code or device firmware is updated to
-                    recognize and respond to the new command.
+                    Note: If you change the command (e.g., from &quot;F&quot; to
+                    &quot;UP&quot;), make sure your Arduino code or device
+                    firmware is updated to recognize and respond to the new
+                    command.
                   </Text>
                 </View>
               )}
